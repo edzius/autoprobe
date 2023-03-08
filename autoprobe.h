@@ -8,6 +8,8 @@ struct mod_info {
 	char *name;
 	char *opts;
 	char *path;
+	char **deps;
+	int depcnt;
 };
 
 #endif // _AUTOPROBE_H

@@ -5,9 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 #include "list.h"
 #include "logger.h"
 #include "autoprobe.h"
+#include "mod-index.h"
 
 #define MOD_LOAD_CONF "/etc/modules-load.d"
 #define MOD_OWRT_CONF "/etc/modules.d"
@@ -29,6 +31,30 @@ modrec_add_option(struct mod_info *info, const char *modopts)
 	if (!info->opts)
 		return;
 	strcat(info->opts, modopts);
+}
+
+static void
+modrec_add(struct list_head *modlist, struct mod_info *modinfo)
+{
+	int i;
+	struct mod_info *info = NULL;
+	struct list_head *pos, *head = modlist;
+
+	for (i = 0; i < modinfo->depcnt; i++) {
+		list_for_each_prev(pos, head) {
+			if (list_is_last(pos, modlist))
+				break;
+			info = list_entry(pos, struct mod_info, list);
+			if (!strcmp(info->name, modinfo->deps[i])) {
+				head = pos;
+				break;
+			}
+		}
+	}
+
+	log_debug("record kernel module '%s'\n",
+		  modinfo->name);
+	list_add(&modinfo->list, head);
 }
 
 static struct mod_info *
@@ -64,11 +90,19 @@ modrec_define(struct list_head *modlist, const char *modname, const char *modopt
 	}
 	memset(info, 0, sizeof(*info));
 
-	info->name = strdup(modname);
+	if (mod_search(modname, info)) {
+		log_info("Cannot find module '%s'\n", modname);
+		free(info);
+		return;
+	}
 	if (modopts)
 		modrec_add_option(info, modopts);
 
-	list_add(&info->list, modlist);
+	for (i = 0; i < info->depcnt; i++) {
+		modrec_define(modlist, info->deps[i], NULL);
+	}
+
+	modrec_add(modlist, info);
 }
 
 static int
@@ -144,6 +178,8 @@ static void help(void)
 int main(int argc, char *argv[])
 {
 	struct list_head modlist = LIST_HEAD_INIT(modlist);
+	struct utsname u;
+	char dirname[PATH_MAX];
 	char opt;
 
 	while ((opt = getopt(argc, argv, "hnfri")) != -1) {
@@ -171,6 +207,18 @@ int main(int argc, char *argv[])
 	    !opt_info && !opt_dry) {
 		log_warn("no option given\n");
 		help();
+	}
+
+	if (uname(&u) < 0) {
+		log_error("cannot get kernel version\n");
+		return -1;
+	}
+	log_debug("Loading modules for kernel %s\n", u.release);
+	snprintf(dirname, sizeof(dirname), "/lib/modules/%s", u.release);
+
+	if (mod_init(dirname)) {
+		log_error("cannot find kernel modules\n");
+		return -1;
 	}
 
 	modrec_config(&modlist, MOD_LOAD_CONF);
