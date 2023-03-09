@@ -12,6 +12,7 @@
 #include "list.h"
 #include "logger.h"
 #include "libmodules.h"
+#include "mod-probe.h"
 
 static LLIST_HEAD(kmod_list);
 
@@ -123,27 +124,6 @@ static int elf_find_section(char *map, const char *section, unsigned int *offset
 	return -1;
 }
 
-static void libmod_parse_deps(struct mod_file *mod, const char *depends)
-{
-	int tmpcnt;
-	char **tmp;
-	char *p, *deps;
-
-	if (!depends || !*depends)
-		return;
-
-	deps = strdup(depends);
-	p = strtok(deps, ",");
-	do {
-		tmpcnt = mod->mod_depcnt + 1;
-		tmp = realloc(mod->mod_deps, tmpcnt * sizeof(tmp));
-		if (!tmp)
-			return;
-		mod->mod_deps = tmp;
-		mod->mod_deps[mod->mod_depcnt++] = p;
-	} while ((p = strtok(NULL, ",")));
-}
-
 static int libmod_fill(struct mod_file *mod)
 {
 	int fd, ret = -1;
@@ -195,7 +175,7 @@ static int libmod_fill(struct mod_file *mod)
 		len = sep - strings;
 		sep++;
 		if (!strncmp(strings, "depends=", len + 1))
-			libmod_parse_deps(mod, sep);
+			modline_parse(sep, &mod->mod_deps, &mod->mod_depcnt);
 #if 0
 		/* Disabled until imperative module inspection is enabled. */
 		else if (!strncmp(strings, "name=", len + 1))

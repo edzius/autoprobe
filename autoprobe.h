@@ -13,6 +13,7 @@ struct mod_info {
 	char *path;
 	char **deps;
 	int depcnt;
+	int usage;
 };
 
 #endif // _AUTOPROBE_H

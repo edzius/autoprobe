@@ -119,6 +119,9 @@ modrec_load(struct list_head *modlist)
 	log_notice("loading kernel modules..\n");
 
 	list_for_each_entry_reverse(info, modlist, list) {
+		if (modprb_loaded(info->name))
+			continue;
+
 		total++;
 		if (modprb_insert(info->name, info->path, info->opts)) {
 			fails++;
@@ -249,6 +252,10 @@ int main(int argc, char *argv[])
 	    !opt_info && !opt_dry) {
 		log_warn("no option given\n");
 		help();
+	}
+
+	if (modprb_init()) {
+		log_warn("cannot init probed modules\n");
 	}
 
 	if (uname(&u) < 0) {
