@@ -3,6 +3,11 @@
 
 #include "list.h"
 
+struct mod_item {
+	struct mod_item *next;
+	char value[0];
+};
+
 struct mod_file {
 	struct list_head list;
 	char *mod_path;
@@ -15,5 +20,6 @@ struct mod_file {
 
 int libmod_init(const char *moddir);
 struct mod_file *libmod_search(const char *modname);
+struct mod_item *libmod_all(void);
 
 #endif // _LIBMODULES_H

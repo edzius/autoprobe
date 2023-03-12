@@ -137,3 +137,40 @@ int mod_search(const char *name, struct mod_info *info)
 
 	return -1;
 }
+
+void mod_iterate(int (*cb)(const char *name, void *ctx), void *ctx)
+{
+	struct mod_item *im, *om;
+	struct index_value *ix, *ox;
+	char *sep;
+
+	if (idx) {
+		ix = index_mm_all(idx);
+		if (!ix)
+			return;
+
+		while (ix) {
+			sep = strchr(ix->value, ' ');
+			if (sep) {
+				*sep++ = '\0';
+				cb(ix->value, ctx);
+			}
+
+			ox = ix;
+			ix = ix->next;
+			free(ox);
+		}
+	} else {
+		im = libmod_all();
+		if (!im)
+			return;
+
+		while (im) {
+			cb(im->value, ctx);
+
+			om = im;
+			im = im->next;
+			free(om);
+		}
+	}
+}

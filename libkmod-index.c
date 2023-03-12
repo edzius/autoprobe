@@ -766,3 +766,66 @@ struct index_value *index_mm_searchwild(struct index_mm *idx, const char *key)
 	strbuf_release(&buf);
 	return out;
 }
+
+static char *str_buf;
+static int str_len;
+
+static void index_mm_all_iter(struct index_mm_node *node,
+			      struct strbuf *buf, struct index_value **list)
+{
+	struct index_value *entry;
+	struct index_mm_value *itr, *itr_end;
+	int ch, pushed;
+
+	pushed = strbuf_pushchars(buf, node->prefix);
+
+	itr = node->values.values;
+	itr_end = itr + node->values.len;
+	for (; itr < itr_end; itr++) {
+		int len = buf->used + itr->len + 2;
+		char *tmp = str_buf;
+		if (len > str_len) {
+			tmp = realloc(str_buf, len);
+			if (!tmp)
+				return;
+			str_buf = tmp;
+			str_len = len;
+		}
+		tmp = strncpy(tmp, buf->bytes, buf->used) + buf->used;
+		*tmp++ = ' ';
+		tmp = strncpy(tmp, itr->value, itr->len) + itr->len;
+		*tmp++ = '\0';
+		add_value(list, str_buf, len, itr->priority);
+	}
+
+	for (ch = node->first; ch <= node->last; ch++) {
+		struct index_mm_node *child = index_mm_readchild(node, ch);
+
+		if (child == NULL)
+			continue;
+
+		strbuf_pushchar(buf, ch);
+		index_mm_all_iter(child, buf, list);
+		strbuf_popchar(buf);
+	}
+
+	strbuf_popchars(buf, pushed);
+	index_mm_free_node(node);
+}
+
+struct index_value *index_mm_all(struct index_mm *idx)
+{
+	struct index_value *item = NULL;
+	struct index_mm_node *root;
+	struct strbuf buf;
+
+	root = index_mm_readroot(idx);
+	if (root == NULL)
+		return NULL;
+
+	strbuf_init(&buf);
+	index_mm_all_iter(root, &buf, &item);
+	strbuf_release(&buf);
+
+	return item;
+}

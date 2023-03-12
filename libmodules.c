@@ -234,6 +234,21 @@ struct mod_file *libmod_search(const char *modname)
 	return NULL;
 }
 
+struct mod_item *libmod_all(void)
+{
+	struct mod_item *item, *list = NULL;
+	struct mod_file *km;
+
+	list_for_each_entry(km, &kmod_list, list) {
+		item = calloc(1, sizeof(*item) + strlen(km->mod_name) + 1);
+		strcpy(item->value, km->mod_name);
+		item->next = list;
+		list = item;
+	}
+
+	return list;
+}
+
 int libmod_init(const char *moddir)
 {
 	log_debug("search %s\n", moddir);

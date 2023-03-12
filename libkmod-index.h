@@ -31,6 +31,7 @@ int index_mm_open(const char *filename, struct index_mm **pidx);
 void index_mm_close(struct index_mm *index);
 char *index_mm_search(struct index_mm *idx, const char *key);
 struct index_value *index_mm_searchwild(struct index_mm *idx, const char *key);
+struct index_value *index_mm_all(struct index_mm *idx);
 void index_mm_dump(struct index_mm *idx, int fd, const char *prefix);
 
 #endif // _LIBKMOD_INDEX_H

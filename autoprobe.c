@@ -162,6 +162,13 @@ modrec_config(struct list_head *modlist, const char *moddir)
 	return 0;
 }
 
+int modrec_visit(const char *name, void *ctx)
+{
+	struct list_head *modlist = ctx;
+
+	modrec_define(modlist, name, NULL);
+}
+
 static void help(void)
 {
 	printf(
@@ -225,6 +232,9 @@ int main(int argc, char *argv[])
 	modrec_config(&modlist, MOD_OWRT_CONF);
 	if (getenv("MOD_CONF_DIR"))
 		modrec_config(&modlist, getenv("MOD_CONF_DIR"));
+
+	if (opt_force)
+		mod_iterate(modrec_visit, &modlist);
 
 	return 0;
 }
