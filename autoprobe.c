@@ -72,7 +72,7 @@ modrec_find(struct list_head *modlist, const char *modname)
 }
 
 static void
-modrec_define(struct list_head *modlist, const char *modname, const char *modopts)
+modrec_define_insert(struct list_head *modlist, const char *modname, const char *modopts)
 {
 	int i;
 	struct mod_info *info;
@@ -100,7 +100,37 @@ modrec_define(struct list_head *modlist, const char *modname, const char *modopt
 		modrec_add_option(info, modopts);
 
 	for (i = 0; i < info->depcnt; i++) {
-		modrec_define(modlist, info->deps[i], NULL);
+		modrec_define_insert(modlist, info->deps[i], NULL);
+	}
+
+	modrec_add(modlist, info);
+}
+
+static void
+modrec_define_remove(struct list_head *modlist, const char *modname)
+{
+	int i;
+	struct mod_info *info;
+
+	info = modrec_find(modlist, modname);
+	if (info)
+		return;
+
+	info = malloc(sizeof(*info));
+	if (!info) {
+		log_error("Cannot alloc module info\n");
+		return;
+	}
+	memset(info, 0, sizeof(*info));
+
+	if (modprb_search(modname, info)) {
+		log_warn("Cannot find loaded module '%s'\n", modname);
+		free(info);
+		return;
+	}
+
+	for (i = 0; i < info->depcnt; i++) {
+		modrec_define_remove(modlist, info->deps[i]);
 	}
 
 	modrec_add(modlist, info);
@@ -139,6 +169,38 @@ modrec_load(struct list_head *modlist)
 
 	if (fails)
 		log_warn("Failed to load %i/%i modules\n", fails, total);
+
+	return fails != 0;
+}
+
+static int
+modrec_unload(struct list_head *modlist)
+{
+	char *p;
+	int i;
+	int total = 0, fails = 0;
+	struct mod_info *info;
+
+	log_notice("unloading kernel modules..\n");
+
+	list_for_each_entry_reverse(info, modlist, list) {
+		total++;
+		if (modprb_remove(info->name)) {
+			fails++;
+			p = msgbuf;
+			p += sprintf(p, "'%s'", info->name);
+			if (info->depcnt) {
+				p += sprintf(p, ", requires: ");
+				for (i = 0; i < info->depcnt; i++)
+					p += sprintf(p, "'%s' ", info->deps[i]);
+				p--;
+			}
+			log_info("Failed to unload %s\n", msgbuf);
+		}
+	}
+
+	if (fails)
+		log_warn("Failed to unload %i/%i modules\n", fails, total);
 
 	return fails != 0;
 }
@@ -189,7 +251,7 @@ modrec_config(struct list_head *modlist, const char *moddir)
 
 			log_debug("record kernel module '%s', params '%s'\n",
 				  mod, opts);
-			modrec_define(modlist, mod, opts);
+			modrec_define_insert(modlist, mod, opts);
 		}
 		free(mod);
 		fclose(fp);
@@ -200,11 +262,18 @@ modrec_config(struct list_head *modlist, const char *moddir)
 	return 0;
 }
 
-int modrec_visit(const char *name, void *ctx)
+int modrec_collect_insert(const char *name, void *ctx)
 {
 	struct list_head *modlist = ctx;
 
-	modrec_define(modlist, name, NULL);
+	modrec_define_insert(modlist, name, NULL);
+}
+
+int modrec_collect_remove(const char *name, void *ctx)
+{
+	struct list_head *modlist = ctx;
+
+	modrec_define_remove(modlist, name);
 }
 
 static void help(void)
@@ -258,6 +327,11 @@ int main(int argc, char *argv[])
 		log_warn("cannot init probed modules\n");
 	}
 
+	if (opt_reverse) {
+		modprb_iterate(modrec_collect_remove, &modlist);
+		return modrec_unload(&modlist);
+	}
+
 	if (uname(&u) < 0) {
 		log_error("cannot get kernel version\n");
 		return -1;
@@ -276,7 +350,7 @@ int main(int argc, char *argv[])
 		modrec_config(&modlist, getenv("MOD_CONF_DIR"));
 
 	if (opt_force)
-		mod_iterate(modrec_visit, &modlist);
+		mod_iterate(modrec_collect_insert, &modlist);
 
 	return modrec_load(&modlist);
 }

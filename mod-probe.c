@@ -73,16 +73,41 @@ int modprb_init(void)
 	return 0;
 }
 
-int modprb_loaded(const char *name)
+void modprb_iterate(int (*cb)(const char *name, void *ctx), void *ctx)
 {
 	struct mod_info *info;
 
 	list_for_each_entry(info, &probed_list, list) {
-		if (!strcmp(name, info->name))
-			return 1;
+		cb(info->name, ctx);
+	}
+}
+
+int modprb_search(const char *name, struct mod_info *result)
+{
+	struct mod_info *info;
+	int found = 0;
+
+	list_for_each_entry(info, &probed_list, list) {
+		if (!strcmp(name, info->name)) {
+			found = 1;
+			break;
+		}
 	}
 
-	return 0;
+	if (found && result) {
+		memset(result, 0, sizeof(*result));
+
+		result->name = info->name;
+		result->deps = info->deps;
+		result->depcnt = info->depcnt;
+	}
+
+	return !found;
+}
+
+int modprb_loaded(const char *name)
+{
+	return !modprb_search(name, NULL);
 }
 
 int modprb_insert(const char *name, const char *path, const char *opts)
@@ -131,6 +156,22 @@ int modprb_insert(const char *name, const char *path, const char *opts)
 out:
 	close(fd);
 	free(data);
+
+	return ret;
+}
+
+int modprb_remove(const char *name)
+{
+	int ret;
+
+	if (opt_dry) {
+		log_debug("Remove %s\n", name);
+		return 0;
+	}
+
+	ret = syscall(__NR_delete_module, name, 0);
+	if (ret)
+		log_info("failed to unload module %s\n", name);
 
 	return ret;
 }
