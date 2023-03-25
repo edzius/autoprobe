@@ -10,14 +10,15 @@
 #include "logger.h"
 #include "autoprobe.h"
 #include "mod-index.h"
+#include "mod-probe.h"
 
 #define MOD_LOAD_CONF "/etc/modules-load.d"
 #define MOD_OWRT_CONF "/etc/modules.d"
 
 #define MOD_OPT_LEN 128
 
-static int opt_dry;
-static int opt_force;
+int opt_dry;
+int opt_force;
 static int opt_reverse;
 static int opt_info;
 
@@ -103,6 +104,40 @@ modrec_define(struct list_head *modlist, const char *modname, const char *modopt
 	}
 
 	modrec_add(modlist, info);
+}
+
+static char msgbuf[4096];
+
+static int
+modrec_load(struct list_head *modlist)
+{
+	char *p;
+	int i;
+	int total = 0, fails = 0;
+	struct mod_info *info;
+
+	log_notice("loading kernel modules..\n");
+
+	list_for_each_entry_reverse(info, modlist, list) {
+		total++;
+		if (modprb_insert(info->name, info->path, info->opts)) {
+			fails++;
+			p = msgbuf;
+			p += sprintf(p, "'%s'", info->name);
+			if (info->depcnt) {
+				p += sprintf(p, ", requires: ");
+				for (i = 0; i < info->depcnt; i++)
+					p += sprintf(p, "'%s' ", info->deps[i]);
+				p--;
+			}
+			log_info("Failed to load %s\n", msgbuf);
+		}
+	}
+
+	if (fails)
+		log_warn("Failed to load %i/%i modules\n", fails, total);
+
+	return fails != 0;
 }
 
 static int
@@ -236,5 +271,5 @@ int main(int argc, char *argv[])
 	if (opt_force)
 		mod_iterate(modrec_visit, &modlist);
 
-	return 0;
+	return modrec_load(&modlist);
 }

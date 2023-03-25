@@ -3,6 +3,9 @@
 
 #include "list.h"
 
+extern int opt_dry;
+extern int opt_force;
+
 struct mod_info {
 	struct list_head list;
 	char *name;
