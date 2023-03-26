@@ -1,0 +1,11 @@
+
+CC = gcc
+CFLAGS = -D_GNU_SOURCE
+CFLAGS += -g -O2
+
+all: autoprobe
+
+autoprobe: autoprobe.c
+
+clean:
+	rm -f autoprobe *.o

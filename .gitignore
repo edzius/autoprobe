@@ -1,0 +1,5 @@
+autoprobe
+*.swo
+*.swp
+cscope.*
+tags
