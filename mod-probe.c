@@ -41,11 +41,12 @@ int modline_parse(const char *line, char ***arr, int *len)
 int modprb_init(void)
 {
 	size_t len = 0;
-	char *line, *buf = NULL;
+	char *buf = NULL;
 	FILE *fp;
 	char *name, *deps;
 	int size, usage;
 	struct mod_info *info;
+	(void)size; /* silence unused */
 
 	fp = fopen("/proc/modules", "r");
 	if (!fp) {

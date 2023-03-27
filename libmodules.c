@@ -14,6 +14,14 @@
 #include "libmodules.h"
 #include "mod-probe.h"
 
+/* backwards compat with tiny libcs */
+#ifndef FTW_CONTINUE
+#define FTW_CONTINUE 0
+#endif
+#ifndef FTW_STOP
+#define FTW_STOP 1
+#endif
+
 static LLIST_HEAD(kmod_list);
 
 static int libmod_nftw_handler(const char *fpath, const struct stat *sb,
@@ -129,7 +137,6 @@ static int libmod_fill(struct mod_file *mod)
 	int fd, ret = -1;
 	unsigned int offset, size;
 	char *map = MAP_FAILED, *strings;
-	char **temp = NULL;
 	struct stat s;
 
 	if (mod->mod_inspect)

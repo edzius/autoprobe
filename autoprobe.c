@@ -267,6 +267,8 @@ int modrec_collect_insert(const char *name, void *ctx)
 	struct list_head *modlist = ctx;
 
 	modrec_define_insert(modlist, name, NULL);
+
+	return 0;
 }
 
 int modrec_collect_remove(const char *name, void *ctx)
@@ -274,6 +276,8 @@ int modrec_collect_remove(const char *name, void *ctx)
 	struct list_head *modlist = ctx;
 
 	modrec_define_remove(modlist, name);
+
+	return 0;
 }
 
 static void help(void)

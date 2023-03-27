@@ -1,4 +1,6 @@
 autoprobe
+*.o
+*.d
 *.swo
 *.swp
 cscope.*

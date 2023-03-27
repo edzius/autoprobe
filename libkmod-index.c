@@ -441,7 +441,7 @@ int index_mm_open(const char *filename, struct index_mm **pidx)
 
 	idx->mm = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (idx->mm == MAP_FAILED) {
-		log_error("mmap(NULL, %lu, PROT_READ, %d, MAP_PRIVATE, 0): %m\n",
+		log_error("mmap(NULL, %jd, PROT_READ, %d, MAP_PRIVATE, 0): %m\n",
 							st.st_size, fd);
 		err = -errno;
 		goto fail_nommap;
@@ -773,7 +773,6 @@ static int str_len;
 static void index_mm_all_iter(struct index_mm_node *node,
 			      struct strbuf *buf, struct index_value **list)
 {
-	struct index_value *entry;
 	struct index_mm_value *itr, *itr_end;
 	int ch, pushed;
 

@@ -33,6 +33,22 @@ modname_normalize(const char *modname, char buf[PATH_MAX], size_t *len)
 	return buf;
 }
 
+static void
+modidx_free(struct mod_info *info)
+{
+	int i;
+
+	if (info->name)
+		free(info->name);
+	if (info->path)
+		free(info->path);
+	if (info->deps) {
+		for (i = 0; i < info->depcnt; i++)
+			free(info->deps[i]);
+		free(info->deps);
+	}
+}
+
 static int
 modidx_parse(struct mod_info *info, const char *name, const char *line)
 {
@@ -53,10 +69,10 @@ modidx_parse(struct mod_info *info, const char *name, const char *line)
 
 	info->name = strdup(name);
 	if (!info->name)
-		return -1;
+		goto err;
 
 	if (asprintf(&info->path, "%s/%s", mod_dir, line) <= 0)
-		return -1;
+		goto err;
 
 	for (p = strtok(p, " \t"); p != NULL;
 	     p = strtok(NULL, " \t")) {
@@ -66,7 +82,7 @@ modidx_parse(struct mod_info *info, const char *name, const char *line)
 		newdepcnt = info->depcnt + 1;
 		newdeps = realloc(info->deps, sizeof(*newdeps) * newdepcnt);
 		if (!newdeps)
-			return -1;
+			goto err;
 
 		info->deps = newdeps;
 		info->deps[info->depcnt] = strdup(modname_normalize(basename(p), buf, NULL));
@@ -74,18 +90,9 @@ modidx_parse(struct mod_info *info, const char *name, const char *line)
 	}
 
 	return 0;
-}
-
-static int
-modidx_free(struct mod_info *info)
-{
-	int i;
-
-	free(info->name);
-	free(info->path);
-	for (i = 0; i < info->depcnt; i++)
-		free(info->deps[i]);
-	free(info->deps);
+err:
+	modidx_free(info);
+	return -1;
 }
 
 int mod_init(const char *moddir)
@@ -123,11 +130,16 @@ int mod_search(const char *name, struct mod_info *info)
 		if (!km)
 			return -1;
 
-		info->name = km->mod_name;
-		info->path = km->mod_path;
+		info->name = strdup(km->mod_name);
+		info->path = strdup(km->mod_path);
+		if (!info->name || !info->path)
+			goto err;
+
 		info->depcnt = km->mod_depcnt;
 		if (info->depcnt) {
 			info->deps = calloc(info->depcnt, sizeof(*info->deps));
+			if (!info->deps)
+				goto err;
 			for (i = 0; i < info->depcnt; i++)
 				info->deps[i] = strdup(km->mod_deps[i]);
 		}
@@ -135,6 +147,8 @@ int mod_search(const char *name, struct mod_info *info)
 		return 0;
 	}
 
+err:
+	modidx_free(info);
 	return -1;
 }
 
