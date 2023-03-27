@@ -210,6 +210,7 @@ modrec_config(struct list_head *modlist, const char *moddir)
 {
 	glob_t gl;
 	char path[PATH_MAX];
+	char *name;
 	int j;
 
 	sprintf(path, "%s/*", moddir);
@@ -217,7 +218,7 @@ modrec_config(struct list_head *modlist, const char *moddir)
 	if (access(moddir, F_OK | R_OK | X_OK))
 		return -1;
 
-	log_info("collect kernel modules list from %s\n", moddir);
+	log_info("configure modules list from %s\n", moddir);
 
 	if (glob(path, GLOB_NOESCAPE | GLOB_MARK, NULL, &gl) < 0)
 		return -1;
@@ -249,9 +250,11 @@ modrec_config(struct list_head *modlist, const char *moddir)
 			if (opts)
 				*opts++ = '\0';
 
-			log_debug("record kernel module '%s', params '%s'\n",
-				  mod, opts);
-			modrec_define_insert(modlist, mod, opts);
+			/* sanitize module names got from external sources */
+			name = mod_name(mod);
+			log_debug("configure module '%s', params '%s'\n",
+				  name, opts ? opts : "");
+			modrec_define_insert(modlist, name, opts);
 		}
 		free(mod);
 		fclose(fp);

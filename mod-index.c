@@ -95,6 +95,13 @@ err:
 	return -1;
 }
 
+char *mod_name(const char *name)
+{
+	static char modname[PATH_MAX];
+
+	return modname_normalize(name, modname, NULL);
+}
+
 int mod_init(const char *moddir)
 {
 	static char modfile[PATH_MAX];
@@ -117,6 +124,8 @@ int mod_search(const char *name, struct mod_info *info)
 	int ret, i;
 	char *line;
 	struct mod_file *km;
+
+	/* provided module name is expected to be sanitised */
 
 	if (idx) {
 		line = index_mm_search(idx, name);
