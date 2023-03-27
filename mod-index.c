@@ -33,7 +33,7 @@ modname_normalize(const char *modname, char buf[PATH_MAX], size_t *len)
 	return buf;
 }
 
-static void
+void
 modidx_free(struct mod_info *info)
 {
 	int i;

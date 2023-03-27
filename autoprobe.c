@@ -262,6 +262,51 @@ modrec_config(struct list_head *modlist, const char *moddir)
 	return 0;
 }
 
+static int
+modrec_print_stored(const char *name, void *ctx)
+{
+	struct mod_info info = {0};
+
+	if (mod_search(name, &info)) {
+		printf("* %s -- no info\n", name);
+		return 0;
+	}
+
+	printf("%s %s @ %s",
+	       modprb_loaded(info.name) ? "+" : "-",
+	       info.name, info.path);
+	if (info.depcnt) {
+		int i;
+		printf(" / ");
+		for (i = 0; i < info.depcnt; i++)
+			printf("%s, ", info.deps[i]);
+	}
+	printf("\n");
+	modidx_free(&info);
+	return 0;
+}
+
+static int
+modrec_print_loaded(const char *name, void *ctx)
+{
+	struct mod_info info = {0};
+
+	if (modprb_search(name, &info)) {
+		printf("* %s -- no info\n", name);
+		return 0;
+	}
+
+	printf("* %s (%u)", info.name, info.usage);
+	if (info.depcnt) {
+		int i;
+		printf(" / ");
+		for (i = 0; i < info.depcnt; i++)
+			printf("%s, ", info.deps[i]);
+	}
+	printf("\n");
+	return 0;
+}
+
 int modrec_collect_insert(const char *name, void *ctx)
 {
 	struct list_head *modlist = ctx;
@@ -340,6 +385,14 @@ int main(int argc, char *argv[])
 	if (mod_init(dirname)) {
 		log_error("cannot find kernel modules\n");
 		return -1;
+	}
+
+	if (opt_info) {
+		printf("Modules stored:\n");
+		mod_iterate(modrec_print_stored, NULL);
+		printf("Modules loaded:\n");
+		modprb_iterate(modrec_print_loaded, NULL);
+		return 0;
 	}
 
 	modrec_config(&modlist, MOD_LOAD_CONF);

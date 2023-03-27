@@ -101,6 +101,7 @@ int modprb_search(const char *name, struct mod_info *result)
 		result->name = info->name;
 		result->deps = info->deps;
 		result->depcnt = info->depcnt;
+		result->usage = info->usage;
 	}
 
 	return !found;
