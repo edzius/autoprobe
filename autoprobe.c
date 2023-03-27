@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
 	char dirname[PATH_MAX];
 	char opt;
 
-	while ((opt = getopt(argc, argv, "hnfri")) != -1) {
+	while ((opt = getopt(argc, argv, "hnfri")) != (char)-1) {
 		switch (opt) {
 		case 'n':
 			opt_dry = 1;
@@ -317,14 +317,8 @@ int main(int argc, char *argv[])
 		case 'h':
 		default: /* '?' */
 			help();
-			break;
+			return 0;
 		}
-	}
-
-	if (!opt_reverse && !opt_force &&
-	    !opt_info && !opt_dry) {
-		log_warn("no option given\n");
-		help();
 	}
 
 	if (modprb_init()) {
