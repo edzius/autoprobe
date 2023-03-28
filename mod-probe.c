@@ -118,16 +118,15 @@ int modprb_insert(const char *name, const char *path, const char *opts)
 	struct stat s;
 	int fd, ret = -1;
 
-	if (!name || !path) {
-		log_error("Path not specified\n");
+	if (!name || !path)
 		return ret;
-	}
 
 	if (opt_dry) {
-		printf("Insert %s '%s' @ %s\n", name, opts, path);
+		printf("Load %s '%s' @ %s\n", name, opts ? opts : "", path);
 		return 0;
 	}
 
+	log_debug("Loading '%s'\n", name);
 	if (stat(path, &s)) {
 		log_error("missing module %s\n", path);
 		return ret;
@@ -150,7 +149,7 @@ int modprb_insert(const char *name, const char *path, const char *opts)
 		if (errno == EEXIST)
 			ret = 0;
 		if (ret)
-			log_info("failed to load module %s\n", name);
+			log_debug("failed to load module %s, error %i\n", path, errno);
 	} else {
 		log_error("failed to read module %s\n", path);
 	}
@@ -166,14 +165,18 @@ int modprb_remove(const char *name)
 {
 	int ret;
 
+	if (!name)
+		return -1;
+
 	if (opt_dry) {
-		log_debug("Remove %s\n", name);
+		printf("Unload %s\n", name);
 		return 0;
 	}
 
+	log_debug("Unloading '%s'\n", name);
 	ret = syscall(__NR_delete_module, name, 0);
 	if (ret)
-		log_info("failed to unload module %s\n", name);
+		log_debug("failed to unload module %s, error %i\n", name, errno);
 
 	return ret;
 }
