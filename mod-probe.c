@@ -146,7 +146,7 @@ int modprb_insert(const char *name, const char *path, const char *opts)
 	}
 
 	if (read(fd, data, s.st_size) == s.st_size) {
-		ret = syscall(__NR_init_module, data, (unsigned long)s.st_size, opts);
+		ret = syscall(__NR_init_module, data, (unsigned long)s.st_size, opts ? opts : "");
 		if (errno == EEXIST)
 			ret = 0;
 		if (ret)
