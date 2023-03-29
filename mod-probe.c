@@ -65,7 +65,7 @@ int modprb_init(void)
 		if (deps && strcmp(deps, "-"))
 			modline_parse(deps, &info->deps, &info->depcnt);
 
-		list_add(&info->list, &probed_list);
+		list_add_tail(&info->list, &probed_list);
 	}
 	free(buf);
 	fclose(fp);
