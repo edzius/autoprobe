@@ -38,23 +38,38 @@ static void
 modrec_add(struct list_head *modlist, struct mod_info *modinfo)
 {
 	int i;
-	struct mod_info *info = NULL;
+	struct mod_info *info, *dep = NULL;
 	struct list_head *pos, *head = modlist;
 
+	/* Our goal here is to load module as early as
+	 * possible but after all module dependencies
+	 * are loaded.
+	 * In our case items closer to the beginning of
+	 * the list has less dependencies, whilst items
+	 * at the end of list has more dependencies. */
+
+	/* Search for insert position where
+	 * all dependencies would be resolved. */
 	for (i = 0; i < modinfo->depcnt; i++) {
-		list_for_each_prev(pos, head) {
-			if (list_is_last(pos, modlist))
+		list_for_each(pos, head) {
+			/* Safe guard to avoid exceeding head/last item */
+			if (pos == modlist)
 				break;
 			info = list_entry(pos, struct mod_info, list);
 			if (!strcmp(info->name, modinfo->deps[i])) {
+				/* Update insert and lookup next item */
 				head = pos;
+				dep = info;
 				break;
 			}
 		}
 	}
+	/* Place unrelated modules without deps at the end. */
+	if (!modinfo->depcnt)
+		head = head->prev;
 
-	log_debug("record kernel module '%s'\n",
-		  modinfo->name);
+	printf("stage module '%s' after '%s'\n",
+		  modinfo->name, dep ? dep->name : "top");
 	list_add(&modinfo->list, head);
 }
 
@@ -148,7 +163,7 @@ modrec_load(struct list_head *modlist)
 
 	log_notice("loading kernel modules..\n");
 
-	list_for_each_entry_reverse(info, modlist, list) {
+	list_for_each_entry(info, modlist, list) {
 		if (modprb_loaded(info->name))
 			continue;
 
@@ -183,7 +198,7 @@ modrec_unload(struct list_head *modlist)
 
 	log_notice("unloading kernel modules..\n");
 
-	list_for_each_entry_reverse(info, modlist, list) {
+	list_for_each_entry(info, modlist, list) {
 		total++;
 		if (modprb_remove(info->name)) {
 			fails++;
