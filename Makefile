@@ -19,6 +19,7 @@ endif
 sources-y := \
 	libkmod-index.c \
 	libmodules.c \
+	logger.c \
 	mod-index.c \
 	mod-probe.c \
 	autoprobe.c

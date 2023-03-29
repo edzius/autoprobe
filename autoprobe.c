@@ -346,8 +346,9 @@ int modrec_collect_remove(const char *name, void *ctx)
 static void help(void)
 {
 	printf(
-	       "Usage:\tautoprobe [-n] [-f] [-r] [-i]\n"
+	       "Usage:\tautoprobe [-v[v..]] [-n] [-f] [-r] [-i]\n"
 	       "\n"
+	       "\t-v\tincrease logger verbosity level\n"
 	       "\t-n\tno probe, dry-run mode\n"
 	       "\t-f\tforce probe all modules\n"
 	       "\t-r\treverse probe, unload modules\n"
@@ -363,7 +364,7 @@ int main(int argc, char *argv[])
 	char dirname[PATH_MAX];
 	char opt;
 
-	while ((opt = getopt(argc, argv, "hnfri")) != (char)-1) {
+	while ((opt = getopt(argc, argv, "hvnfri")) != (char)-1) {
 		switch (opt) {
 		case 'n':
 			opt_dry = 1;
@@ -376,6 +377,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'i':
 			opt_info = 1;
+			break;
+		case 'v':
+			log_level++;
 			break;
 		case 'h':
 		default: /* '?' */
