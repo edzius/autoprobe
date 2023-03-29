@@ -420,7 +420,7 @@ int index_mm_open(const char *filename, struct index_mm **pidx)
 
 	assert(pidx != NULL);
 
-	log_debug("file=%s\n", filename);
+	log_verbose("file=%s\n", filename);
 
 	idx = malloc(sizeof(*idx));
 	if (idx == NULL) {

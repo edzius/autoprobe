@@ -66,6 +66,10 @@ int modprb_init(void)
 		if (deps && strcmp(deps, "-"))
 			modline_parse(deps, &info->deps, &info->depcnt);
 
+		log_verbose("loaded module '%s' used (%i): %s\n",
+			    info->name, info->usage,
+			    arr2str(info->deps, info->depcnt));
+
 		list_add_tail(&info->list, &probed_list);
 	}
 	free(buf);
@@ -126,7 +130,7 @@ int modprb_insert(const char *name, const char *path, const char *opts)
 		return 0;
 	}
 
-	log_debug("Loading '%s'\n", name);
+	log_info("Loading '%s'\n", name);
 	if (stat(path, &s)) {
 		log_error("missing module %s\n", path);
 		return ret;
@@ -149,7 +153,9 @@ int modprb_insert(const char *name, const char *path, const char *opts)
 		if (errno == EEXIST)
 			ret = 0;
 		if (ret)
-			log_debug("failed to load module %s, error %i\n", path, errno);
+			log_debug("failed to load module '%s', error %i\n", path, errno);
+		else
+			log_verbose("successfuly loaded module '%s', size %zu\n", name, s.st_size);
 	} else {
 		log_error("failed to read module %s\n", path);
 	}
@@ -173,10 +179,12 @@ int modprb_remove(const char *name)
 		return 0;
 	}
 
-	log_debug("Unloading '%s'\n", name);
+	log_info("Unloading '%s'\n", name);
 	ret = syscall(__NR_delete_module, name, 0);
 	if (ret)
-		log_debug("failed to unload module %s, error %i\n", name, errno);
+		log_debug("failed to unload module '%s', error %i\n", name, errno);
+	else
+		log_verbose("successfuly unloaded module '%s'\n", name);
 
 	return ret;
 }

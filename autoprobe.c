@@ -68,8 +68,10 @@ modrec_add(struct list_head *modlist, struct mod_info *modinfo)
 	if (!modinfo->depcnt)
 		head = head->prev;
 
-	printf("stage module '%s' after '%s'\n",
-		  modinfo->name, dep ? dep->name : "top");
+	(void)dep; /* ignore compiler warnings */
+	log_verbose("stage module '%s', after '%s', depends: %s\n",
+		    modinfo->name, dep ? dep->name : "top",
+		    arr2str(modinfo->deps, modinfo->depcnt));
 	list_add(&modinfo->list, head);
 }
 
@@ -107,7 +109,7 @@ modrec_define_insert(struct list_head *modlist, const char *modname, const char 
 	memset(info, 0, sizeof(*info));
 
 	if (mod_search(modname, info)) {
-		log_info("Cannot find module '%s'\n", modname);
+		log_warn("Cannot find module '%s'\n", modname);
 		free(info);
 		return;
 	}
@@ -151,13 +153,9 @@ modrec_define_remove(struct list_head *modlist, const char *modname)
 	modrec_add(modlist, info);
 }
 
-static char msgbuf[4096];
-
 static int
 modrec_load(struct list_head *modlist)
 {
-	char *p;
-	int i;
 	int total = 0, fails = 0;
 	struct mod_info *info;
 
@@ -170,15 +168,8 @@ modrec_load(struct list_head *modlist)
 		total++;
 		if (modprb_insert(info->name, info->path, info->opts)) {
 			fails++;
-			p = msgbuf;
-			p += sprintf(p, "'%s'", info->name);
-			if (info->depcnt) {
-				p += sprintf(p, ", requires: ");
-				for (i = 0; i < info->depcnt; i++)
-					p += sprintf(p, "'%s' ", info->deps[i]);
-				p--;
-			}
-			log_info("Failed to load %s\n", msgbuf);
+			log_info("Failed to load '%s', needed for: %s\n", info->name,
+				 arr2str(info->deps, info->depcnt));
 		}
 	}
 
@@ -191,8 +182,6 @@ modrec_load(struct list_head *modlist)
 static int
 modrec_unload(struct list_head *modlist)
 {
-	char *p;
-	int i;
 	int total = 0, fails = 0;
 	struct mod_info *info;
 
@@ -202,15 +191,8 @@ modrec_unload(struct list_head *modlist)
 		total++;
 		if (modprb_remove(info->name)) {
 			fails++;
-			p = msgbuf;
-			p += sprintf(p, "'%s'", info->name);
-			if (info->depcnt) {
-				p += sprintf(p, ", requires: ");
-				for (i = 0; i < info->depcnt; i++)
-					p += sprintf(p, "'%s' ", info->deps[i]);
-				p--;
-			}
-			log_info("Failed to unload %s\n", msgbuf);
+			log_info("Failed to load '%s', used by: %s\n", info->name,
+				 arr2str(info->deps, info->depcnt));
 		}
 	}
 
@@ -245,7 +227,7 @@ modrec_config(struct list_head *modlist, const char *moddir)
 
 		fp = fopen(gl.gl_pathv[j], "r");
 		if (!fp) {
-			log_debug("failed to open %s\n", gl.gl_pathv[j]);
+			log_warn("failed to open %s\n", gl.gl_pathv[j]);
 			continue;
 		}
 
@@ -345,7 +327,7 @@ int modrec_collect_remove(const char *name, void *ctx)
 
 static void help(void)
 {
-	printf(
+	fprintf(stderr,
 	       "Usage:\tautoprobe [-v[v..]] [-n] [-f] [-r] [-i]\n"
 	       "\n"
 	       "\t-v\tincrease logger verbosity level\n"

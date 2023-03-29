@@ -42,7 +42,7 @@ static int libmod_nftw_handler(const char *fpath, const struct stat *sb,
 		return FTW_STOP;
 	}
 
-	log_debug("found '%s'\n", fpath);
+	log_verbose("found '%s'\n", fpath);
 
 	km->mod_path = strdup(fpath);
 	if (!km->mod_path)
@@ -238,7 +238,7 @@ struct mod_item *libmod_all(void)
 
 int libmod_init(const char *moddir)
 {
-	log_debug("search %s\n", moddir);
+	log_verbose("search %s\n", moddir);
 
 	if (nftw(moddir, libmod_nftw_handler, 10,
 		 FTW_DEPTH | FTW_MOUNT | FTW_PHYS) < 0) {
